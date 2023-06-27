@@ -1,5 +1,10 @@
 #include "gtkshadertoy.h"
+
+#ifdef GDK_WINDOWING_X11
 #include "x11.h"
+#else
+g_error("Unsupported GDK backend");
+#endif
 
 typedef struct {
   gchar *shader_src;
@@ -51,10 +56,7 @@ void app_activate(GApplication *app, Opt *opt) {
   gtk_widget_add_controller(GTK_WIDGET(win), ctrl);
 
   if (opt->below) {
-    net_wm_state_set_prop(win, "_NET_WM_STATE_BELOW", 1);
-    net_wm_state_set_prop(win, "_NET_WM_STATE_STICKY", 1);
-    net_wm_state_set_prop(win, "_NET_WM_STATE_SKIP_PAGER", 1);
-    net_wm_state_set_prop(win, "_NET_WM_STATE_SKIP_TASKBAR", 1);
+    move_close_to_root(win);
   }
 }
 
