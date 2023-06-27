@@ -8,6 +8,19 @@ typedef struct {
   bool x11_root_window;
 } Opt;
 
+void fullscreen_toggle(GtkWidget *win) {
+  void (*fn)(GtkWindow*) = gtk_window_is_fullscreen(GTK_WINDOW(win)) ? gtk_window_unfullscreen : gtk_window_fullscreen;
+  fn(GTK_WINDOW(win));
+}
+
+gboolean on_keypress(GtkWidget *win, guint keyval, guint keycode,
+                     GdkModifierType state,
+                     GtkEventControllerKey *event_controller) {
+  if (GDK_KEY_f == keyval) fullscreen_toggle(win);
+  if (GDK_KEY_q == keyval) exit(0);
+  return TRUE;
+}
+
 GtkWidget* new_shadertoy(gchar *shader_src) {
   GtkWidget *toy = gtk_shadertoy_new();
   gtk_shadertoy_set_image_shader(GTK_SHADERTOY(toy), shader_src);
@@ -32,6 +45,11 @@ void app_activate(GApplication *app, Opt *opt) {
 
   gtk_window_present(GTK_WINDOW(win));
   if (opt->fullscreen) gtk_window_fullscreen(GTK_WINDOW(win));
+
+  GtkEventController *event_controller = gtk_event_controller_key_new();
+  g_signal_connect_object(event_controller, "key-pressed",
+                          G_CALLBACK(on_keypress), win, G_CONNECT_SWAPPED);
+  gtk_widget_add_controller(GTK_WIDGET(win), event_controller);
 }
 
 gchar* stdin_read() {
