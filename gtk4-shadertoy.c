@@ -1,15 +1,20 @@
 #include <epoxy/gl.h>
 #include "gtkshadertoy.h"
 
-static gchar *my_shader;
+typedef struct {
+  gchar *shader_src;
+  bool fullscreen;
+  bool framerate;
+  bool x11_root_window;
+} Opt;
 
-GtkWidget* new_shadertoy() {
+GtkWidget* new_shadertoy(gchar *shader_src) {
   GtkWidget *toy = gtk_shadertoy_new();
-  gtk_shadertoy_set_image_shader(GTK_SHADERTOY(toy), my_shader);
+  gtk_shadertoy_set_image_shader(GTK_SHADERTOY(toy), shader_src);
   return toy;
 }
 
-void app_activate(GApplication *app, gpointer *user_data) {
+void app_activate(GApplication *app, Opt *opt) {
   GtkWidget *win = gtk_window_new();
   gtk_window_set_application(GTK_WINDOW(win), GTK_APPLICATION(app));
   gtk_window_set_default_size(GTK_WINDOW(win), 854, 480); // 480p, 16:9
@@ -22,10 +27,11 @@ void app_activate(GApplication *app, gpointer *user_data) {
   gtk_widget_set_vexpand(aspect, TRUE);
   gtk_box_append(GTK_BOX(box), aspect);
 
-  GtkWidget *shadertoy = new_shadertoy();
+  GtkWidget *shadertoy = new_shadertoy(opt->shader_src);
   gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), shadertoy);
 
   gtk_window_present(GTK_WINDOW(win));
+  if (opt->fullscreen) gtk_window_fullscreen(GTK_WINDOW(win));
 }
 
 gchar* stdin_read() {
@@ -40,12 +46,19 @@ gchar* stdin_read() {
 }
 
 int main(int argc, char **argv) {
-  my_shader = stdin_read();
-
   GtkApplication *app = gtk_application_new("org.sigwait.gtk4-shadertoy",
                                             G_APPLICATION_DEFAULT_FLAGS);
-  g_signal_connect(app, "activate", G_CALLBACK(app_activate), NULL);
-  int stat = g_application_run(G_APPLICATION(app), argc, argv);
+  Opt opt = {};
+  GOptionEntry params[] = {
+    { "fullscreen", 'f', 0, G_OPTION_ARG_NONE, &opt.fullscreen, NULL, NULL },
+    { NULL }
+  };
+  g_application_add_main_option_entries (G_APPLICATION(app), params);
+
+  opt.shader_src = stdin_read();
+  g_signal_connect(app, "activate", G_CALLBACK(app_activate), &opt);
+
+  int status = g_application_run(G_APPLICATION(app), argc, argv);
   g_object_unref(app);
-  return stat;
+  return status;
 }
