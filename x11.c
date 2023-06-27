@@ -39,18 +39,7 @@ void net_wm_state_set_prop(GtkWidget *win, char *prop, int state) {
     g_warning("net_wm_state_set_prop %s=%d failed", prop, state);
 }
 
-void wm_class_set(GtkWidget *win, char *name, char *klass) {
-  DisplayAndWindow daw = display_and_window(win);
-  XClassHint *ch = XAllocClassHint();
-  ch->res_name = name;
-  ch->res_class = klass;
-  XSetClassHint(daw.dpy, daw.id, ch);
-  XFree(ch);
-}
-
 void move_close_to_root(GtkWidget *win) {
-  wm_class_set(win, "gtk4_shadertoy_below", "GTK4_Shadertoy_Below");
-
   net_wm_state_set_prop(win, "_NET_WM_STATE_BELOW", 1);
   net_wm_state_set_prop(win, "_NET_WM_STATE_STICKY", 1);
   net_wm_state_set_prop(win, "_NET_WM_STATE_SKIP_PAGER", 1);

@@ -32,6 +32,8 @@ GtkWidget* new_shadertoy(gchar *shader_src) {
 }
 
 void app_activate(GApplication *app, Opt *opt) {
+  if (opt->below) g_set_prgname("gtk4_shadertoy_below");
+
   GtkWidget *win = gtk_window_new();
   gtk_window_set_application(GTK_WINDOW(win), GTK_APPLICATION(app));
   gtk_window_set_default_size(GTK_WINDOW(win), 854, 480); // 480p, 16:9
