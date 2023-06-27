@@ -1,10 +1,11 @@
 #include "gtkshadertoy.h"
+#include "x11.h"
 
 typedef struct {
   gchar *shader_src;
   bool fullscreen;
   bool framerate;
-  bool x11_root_window;
+  bool below;
 } Opt;
 
 void fullscreen_toggle(GtkWidget *win) {
@@ -48,6 +49,13 @@ void app_activate(GApplication *app, Opt *opt) {
   g_signal_connect_object(ctrl, "key-pressed",
                           G_CALLBACK(on_keypress), win, G_CONNECT_SWAPPED);
   gtk_widget_add_controller(GTK_WIDGET(win), ctrl);
+
+  if (opt->below) {
+    net_wm_state_set_prop(win, "_NET_WM_STATE_BELOW", 1);
+    net_wm_state_set_prop(win, "_NET_WM_STATE_STICKY", 1);
+    net_wm_state_set_prop(win, "_NET_WM_STATE_SKIP_PAGER", 1);
+    net_wm_state_set_prop(win, "_NET_WM_STATE_SKIP_TASKBAR", 1);
+  }
 }
 
 gchar* stdin_read() {
@@ -67,6 +75,7 @@ int main(int argc, char **argv) {
   Opt opt = {};
   GOptionEntry params[] = {
     { "fullscreen", 'f', 0, G_OPTION_ARG_NONE, &opt.fullscreen, NULL, NULL },
+    { "below", 'b', 0, G_OPTION_ARG_NONE, &opt.below, NULL, NULL },
     { NULL }
   };
   g_application_add_main_option_entries(G_APPLICATION(app), params);

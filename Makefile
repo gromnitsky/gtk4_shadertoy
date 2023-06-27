@@ -1,5 +1,5 @@
 out := _out
-libs := gtk4 epoxy
+libs := gtk4 epoxy x11
 
 CFLAGS := -g -Wall -std=c17 $(shell pkg-config $(libs) --cflags)
 LDFLAGS := $(shell pkg-config $(libs) --libs)
@@ -14,6 +14,7 @@ $(out)/%.o: %.c
 	$(COMPILE.c) $< -o $@
 
 $(out)/gtkshadertoy.o: gtkshadertoy.h
+$(out)/x11.o: x11.h
 
 smoke: $(out)/gtk4_shadertoy
 	$< < very-fast-procedural-ocean.glsl
