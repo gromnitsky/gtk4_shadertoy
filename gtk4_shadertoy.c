@@ -1,4 +1,3 @@
-#include <epoxy/gl.h>
 #include "gtkshadertoy.h"
 
 typedef struct {
@@ -14,10 +13,9 @@ void fullscreen_toggle(GtkWidget *win) {
 }
 
 gboolean on_keypress(GtkWidget *win, guint keyval, guint keycode,
-                     GdkModifierType state,
-                     GtkEventControllerKey *event_controller) {
+                     GdkModifierType state, GtkEventControllerKey *evt_ctrl) {
   if (GDK_KEY_f == keyval) fullscreen_toggle(win);
-  if (GDK_KEY_q == keyval) exit(0);
+  if (GDK_KEY_q == keyval) gtk_window_close(GTK_WINDOW(win));
   return TRUE;
 }
 
@@ -46,10 +44,10 @@ void app_activate(GApplication *app, Opt *opt) {
   gtk_window_present(GTK_WINDOW(win));
   if (opt->fullscreen) gtk_window_fullscreen(GTK_WINDOW(win));
 
-  GtkEventController *event_controller = gtk_event_controller_key_new();
-  g_signal_connect_object(event_controller, "key-pressed",
+  GtkEventController *ctrl = gtk_event_controller_key_new();
+  g_signal_connect_object(ctrl, "key-pressed",
                           G_CALLBACK(on_keypress), win, G_CONNECT_SWAPPED);
-  gtk_widget_add_controller(GTK_WIDGET(win), event_controller);
+  gtk_widget_add_controller(GTK_WIDGET(win), ctrl);
 }
 
 gchar* stdin_read() {
@@ -64,14 +62,14 @@ gchar* stdin_read() {
 }
 
 int main(int argc, char **argv) {
-  GtkApplication *app = gtk_application_new("org.sigwait.gtk4-shadertoy",
+  GtkApplication *app = gtk_application_new("org.sigwait.gtk4_shadertoy",
                                             G_APPLICATION_DEFAULT_FLAGS);
   Opt opt = {};
   GOptionEntry params[] = {
     { "fullscreen", 'f', 0, G_OPTION_ARG_NONE, &opt.fullscreen, NULL, NULL },
     { NULL }
   };
-  g_application_add_main_option_entries (G_APPLICATION(app), params);
+  g_application_add_main_option_entries(G_APPLICATION(app), params);
 
   opt.shader_src = stdin_read();
   g_signal_connect(app, "activate", G_CALLBACK(app_activate), &opt);

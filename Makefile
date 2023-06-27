@@ -1,12 +1,12 @@
 out := _out
 libs := gtk4 epoxy
 
-CFLAGS := -g -Wall -Werror -std=c17 $(shell pkg-config $(libs) --cflags)
+CFLAGS := -g -Wall -std=c17 $(shell pkg-config $(libs) --cflags)
 LDFLAGS := $(shell pkg-config $(libs) --libs)
 
 deps := $(patsubst %.c, $(out)/%.o, $(wildcard *.c))
 
-$(out)/gtk4-shadertoy: $(deps)
+$(out)/gtk4_shadertoy: $(deps)
 	$(CC) $(LDFLAGS) $(deps) -o $@
 
 $(out)/%.o: %.c
@@ -15,5 +15,5 @@ $(out)/%.o: %.c
 
 $(out)/gtkshadertoy.o: gtkshadertoy.h
 
-smoke: $(out)/gtk4-shadertoy
+smoke: $(out)/gtk4_shadertoy
 	$< < very-fast-procedural-ocean.glsl
