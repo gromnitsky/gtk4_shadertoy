@@ -3,13 +3,13 @@
 #ifdef GDK_WINDOWING_X11
 #include "x11.h"
 #else
-g_error("Unsupported GDK backend");
+#error "Unsupported GDK backend"
 #endif
 
 typedef struct {
   gchar *shader_src;
   bool fullscreen;
-  bool framerate;
+  bool framerate;               /* TODO */
   bool below;
 } Opt;
 
@@ -18,10 +18,17 @@ void fullscreen_toggle(GtkWidget *win) {
   fn(GTK_WINDOW(win));
 }
 
+double fps(GtkWidget *w) {
+  GdkFrameClock *frame_clock = gtk_widget_get_frame_clock(w);
+  if (frame_clock == NULL) return 0.0;
+  return gdk_frame_clock_get_fps(frame_clock);
+}
+
 gboolean on_keypress(GtkWidget *win, guint keyval, guint keycode,
                      GdkModifierType state, GtkEventControllerKey *evt_ctrl) {
   if (GDK_KEY_f == keyval) fullscreen_toggle(win);
   if (GDK_KEY_q == keyval) gtk_window_close(GTK_WINDOW(win));
+  if (GDK_KEY_r == keyval) printf("%f\n", fps(win));
   return TRUE;
 }
 
@@ -31,12 +38,19 @@ GtkWidget* new_shadertoy(gchar *shader_src) {
   return toy;
 }
 
+gboolean on_close(GtkWidget *w, Opt *opt) {
+  if (opt->below) gdk_display_beep(gtk_widget_get_display(w));
+  return opt->below;
+}
+
 void app_activate(GApplication *app, Opt *opt) {
   if (opt->below) g_set_prgname("gtk4_shadertoy_below");
 
   GtkWidget *win = gtk_window_new();
   gtk_window_set_application(GTK_WINDOW(win), GTK_APPLICATION(app));
   gtk_window_set_default_size(GTK_WINDOW(win), 854, 480); // 480p, 16:9
+
+  g_signal_connect(win, "close-request", G_CALLBACK(on_close), opt);
 
   GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, FALSE);
   gtk_window_set_child(GTK_WINDOW(win), box);
@@ -46,19 +60,21 @@ void app_activate(GApplication *app, Opt *opt) {
   gtk_widget_set_vexpand(aspect, TRUE);
   gtk_box_append(GTK_BOX(box), aspect);
 
-  GtkWidget *shadertoy = new_shadertoy(opt->shader_src);
-  gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), shadertoy);
+  GtkWidget *toy = new_shadertoy(opt->shader_src);
+  gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), toy);
 
   gtk_window_present(GTK_WINDOW(win));
+
   if (opt->fullscreen) gtk_window_fullscreen(GTK_WINDOW(win));
 
-  GtkEventController *ctrl = gtk_event_controller_key_new();
-  g_signal_connect_object(ctrl, "key-pressed",
-                          G_CALLBACK(on_keypress), win, G_CONNECT_SWAPPED);
-  gtk_widget_add_controller(GTK_WIDGET(win), ctrl);
-
   if (opt->below) {
+    gtk_widget_set_can_target(toy, FALSE); // ignore mouse events
     move_close_to_root(win);
+  } else {
+    GtkEventController *ctrl = gtk_event_controller_key_new();
+    g_signal_connect_object(ctrl, "key-pressed",
+                            G_CALLBACK(on_keypress), win, G_CONNECT_SWAPPED);
+    gtk_widget_add_controller(GTK_WIDGET(win), ctrl);
   }
 }
 
