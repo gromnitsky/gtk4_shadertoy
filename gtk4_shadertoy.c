@@ -90,8 +90,7 @@ gchar* stdin_read() {
 }
 
 int main(int argc, char **argv) {
-  GtkApplication *app = gtk_application_new("org.sigwait.gtk4_shadertoy",
-                                            G_APPLICATION_DEFAULT_FLAGS);
+  GtkApplication *app = gtk_application_new(NULL, G_APPLICATION_NON_UNIQUE);
   Opt opt = {};
   GOptionEntry params[] = {
     { "fullscreen", 'f', 0, G_OPTION_ARG_NONE, &opt.fullscreen, NULL, NULL },
