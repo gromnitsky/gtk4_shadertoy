@@ -103,7 +103,7 @@ void app_open(GApplication *app, GFile **files, gint n_files,
 }
 
 int main(int argc, char **argv) {
-  GtkApplication *app = gtk_application_new(NULL, G_APPLICATION_HANDLES_OPEN);
+  GtkApplication *app = gtk_application_new(NULL, G_APPLICATION_NON_UNIQUE|G_APPLICATION_HANDLES_OPEN);
   Opt opt = {};
   GOptionEntry params[] = {
     { "fullscreen", 'f', 0, G_OPTION_ARG_NONE, &opt.fullscreen, NULL, NULL },
