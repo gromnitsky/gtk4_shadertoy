@@ -8,10 +8,11 @@
 #endif
 
 typedef struct {
+  gchar *shader_path;
   gchar *shader_src;
-  bool fullscreen;
-  bool framerate;               /* TODO */
-  bool below;
+  gboolean fullscreen;
+  gboolean fps;
+  gboolean below;
 } Opt;
 
 void fullscreen_toggle(GtkWidget *win) {
@@ -23,6 +24,14 @@ double fps(GtkWidget *w) {
   GdkFrameClock *frame_clock = gtk_widget_get_frame_clock(w);
   if (frame_clock == NULL) return 0.0;
   return gdk_frame_clock_get_fps(frame_clock);
+}
+
+gboolean on_toy_tick(GtkWidget* toy, GdkFrameClock* frame_clock,
+                     gpointer fps_label) {
+  char s[10];
+  snprintf(s, sizeof(s), "%.2f", fps(toy));
+  gtk_label_set_text(GTK_LABEL(fps_label), s);
+  return TRUE;
 }
 
 gboolean on_keypress(GtkWidget *win, guint keyval, guint keycode,
@@ -64,6 +73,8 @@ void app_activate(GApplication *app, Opt *opt) {
   GtkWidget *win = gtk_window_new();
   gtk_window_set_application(GTK_WINDOW(win), GTK_APPLICATION(app));
   gtk_window_set_default_size(GTK_WINDOW(win), 854, 480); // 480p, 16:9
+  gtk_window_set_title(GTK_WINDOW(win),
+                       opt->shader_path ? opt->shader_path : "[stdin]");
 
   g_signal_connect(win, "close-request", G_CALLBACK(on_close), opt);
 
@@ -76,7 +87,29 @@ void app_activate(GApplication *app, Opt *opt) {
   gtk_box_append(GTK_BOX(box), aspect);
 
   GtkWidget *toy = new_shadertoy(opt->shader_src);
-  gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), toy);
+
+  if (opt->fps) {
+    GtkWidget *fps_overlay = gtk_overlay_new();
+    gtk_overlay_set_child(GTK_OVERLAY(fps_overlay), toy);
+
+    GtkWidget *fps_frame = gtk_frame_new(NULL);
+    gtk_widget_set_halign(fps_frame, GTK_ALIGN_START);
+    gtk_widget_set_valign(fps_frame, GTK_ALIGN_START);
+    gtk_widget_add_css_class(fps_frame, "app-notification");
+
+    GtkWidget *fps_label = gtk_label_new("-1");
+    gtk_widget_set_halign(fps_label, GTK_ALIGN_START);
+    gtk_frame_set_child(GTK_FRAME(fps_frame), fps_label);
+    gtk_overlay_add_overlay(GTK_OVERLAY(fps_overlay), fps_frame);
+
+    gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), fps_overlay);
+
+    gtk_widget_add_tick_callback(toy, on_toy_tick, fps_label, NULL);
+  } else {
+    gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), toy);
+  }
+
+  g_free(opt->shader_path);
   g_free(opt->shader_src);
 
   gtk_window_present(GTK_WINDOW(win));
@@ -98,6 +131,7 @@ void app_open(GApplication *app, GFile **files, gint n_files,
               gchar* hint, Opt *opt) {
   char *path = g_file_get_path(files[0]);
   opt->shader_src = input(path);
+  if (opt->shader_src) opt->shader_path = g_file_get_basename(files[0]);
   g_free(path);
   g_application_activate(app);
 }
@@ -106,8 +140,9 @@ int main(int argc, char **argv) {
   GtkApplication *app = gtk_application_new(NULL, G_APPLICATION_NON_UNIQUE|G_APPLICATION_HANDLES_OPEN);
   Opt opt = {};
   GOptionEntry params[] = {
-    { "fullscreen", 'f', 0, G_OPTION_ARG_NONE, &opt.fullscreen, NULL, NULL },
-    { "below", 'b', 0, G_OPTION_ARG_NONE, &opt.below, NULL, NULL },
+    { "fullscreen", 'f', 0,G_OPTION_ARG_NONE,&opt.fullscreen,NULL,NULL },
+    { "below", 'b', 0,G_OPTION_ARG_NONE, &opt.below,"fake x11 root window",NULL},
+    { "fps", 'r', 0,G_OPTION_ARG_NONE,&opt.fps,"show an FPS overlay", NULL },
     { NULL }
   };
   g_application_add_main_option_entries(G_APPLICATION(app), params);
