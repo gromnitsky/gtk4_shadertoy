@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include "gtkshadertoy.h"
 
 #ifdef GDK_WINDOWING_X11
@@ -43,7 +44,21 @@ gboolean on_close(GtkWidget *w, Opt *opt) {
   return opt->below;
 }
 
+gchar* input(char *file) {
+  int fd = file ? open(file, O_RDONLY) : fileno(stdin);
+  GIOChannel* cn = g_io_channel_unix_new(fd);
+  gchar* buf;
+  gsize len;
+
+  if (G_IO_STATUS_NORMAL != g_io_channel_read_to_end(cn, &buf, &len, NULL))
+    buf = NULL;
+  g_io_channel_unref(cn);
+  if (file) close(fd);
+  return buf;
+}
+
 void app_activate(GApplication *app, Opt *opt) {
+  if (!opt->shader_src) opt->shader_src = input(NULL); // try to read stdin
   if (opt->below) g_set_prgname("gtk4_shadertoy_below");
 
   GtkWidget *win = gtk_window_new();
@@ -62,6 +77,7 @@ void app_activate(GApplication *app, Opt *opt) {
 
   GtkWidget *toy = new_shadertoy(opt->shader_src);
   gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), toy);
+  g_free(opt->shader_src);
 
   gtk_window_present(GTK_WINDOW(win));
 
@@ -78,19 +94,16 @@ void app_activate(GApplication *app, Opt *opt) {
   }
 }
 
-gchar* stdin_read() {
-    GIOChannel* cn = g_io_channel_unix_new(fileno(stdin));
-    gchar* buf;
-    gsize len;
-
-    if (G_IO_STATUS_NORMAL != g_io_channel_read_to_end(cn, &buf, &len, NULL))
-      buf = NULL;
-    g_io_channel_unref(cn);
-    return buf;
+void app_open(GApplication *app, GFile **files, gint n_files,
+              gchar* hint, Opt *opt) {
+  char *path = g_file_get_path(files[0]);
+  opt->shader_src = input(path);
+  g_free(path);
+  g_application_activate(app);
 }
 
 int main(int argc, char **argv) {
-  GtkApplication *app = gtk_application_new(NULL, G_APPLICATION_NON_UNIQUE);
+  GtkApplication *app = gtk_application_new(NULL, G_APPLICATION_HANDLES_OPEN);
   Opt opt = {};
   GOptionEntry params[] = {
     { "fullscreen", 'f', 0, G_OPTION_ARG_NONE, &opt.fullscreen, NULL, NULL },
@@ -99,8 +112,8 @@ int main(int argc, char **argv) {
   };
   g_application_add_main_option_entries(G_APPLICATION(app), params);
 
-  opt.shader_src = stdin_read();
   g_signal_connect(app, "activate", G_CALLBACK(app_activate), &opt);
+  g_signal_connect(app, "open", G_CALLBACK(app_open), &opt);
 
   int status = g_application_run(G_APPLICATION(app), argc, argv);
   g_object_unref(app);
