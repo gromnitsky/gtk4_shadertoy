@@ -30,9 +30,7 @@ Style gtk4_shadertoy_below WindowListSkip
 
 or, by just
 
-~~~
-Style gtk4_shadertoy_below StaysOnBottom, Sticky, WindowListSkip
-~~~
+    Style gtk4_shadertoy_below StaysOnBottom, Sticky, WindowListSkip
 
 ## Features & limitations
 
@@ -51,6 +49,17 @@ $ make
 ~~~
 
 `_out/gtk4_shadertoy` should be the result.
+
+## Fetching a shader without an API key
+
+~~~
+$ npm -g i json
+$ ./shader_fetch tsBfDw | _out/gtk4_shadertoy
+~~~
+
+or
+
+    $ ./shader_fetch https://www.shadertoy.com/view/tsBfDw | _out/gtk4_shadertoy
 
 ## License
 
