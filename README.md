@@ -7,7 +7,7 @@ Run in a window:
 kbd          | desc
 ------------ | -------------
 <kbd>f</kbd> | fullscreen
-<kbd>r</kbd> | print the current FPS to stdout
+<kbd>r</kbd> | print the current framerate to stdout
 <kbd>q</kbd> | close window
 
 Run fullscreen (-f) and show an FPS overlay (-r):
@@ -28,6 +28,12 @@ Style * EWMHUseStackingOrderHints
 Style gtk4_shadertoy_below WindowListSkip
 ~~~
 
+or, by just
+
+~~~
+Style gtk4_shadertoy_below StaysOnBottom, Sticky, WindowListSkip
+~~~
+
 ## Features & limitations
 
 * a tiny gtk4 app;
@@ -35,12 +41,12 @@ Style gtk4_shadertoy_below WindowListSkip
 * X11 only, no wayland support yet;
 * renders only a subset of standalone shaders so far, i.e., if a
   shader depends on a texture specific to shadertoy.com it won't
-  compile.
+  work.
 
 ## Compilation
 
 ~~~
-$ dnf install gtk4-devel
+$ sudo dnf install gtk4-devel
 $ make
 ~~~
 
