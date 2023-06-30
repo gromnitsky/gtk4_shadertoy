@@ -10,15 +10,29 @@
 typedef struct {
   gchar *shader_path;
   gchar *shader_src;
+  GtkWidget* shader;
   gboolean fullscreen;
   gboolean fps;
   gboolean below;
   gint port;
 } Opt;
 
+gchar* input(char *file) {
+  int fd = file ? open(file, O_RDONLY) : fileno(stdin);
+  GIOChannel* cn = g_io_channel_unix_new(fd);
+  gchar* buf;
+  gsize len;
+
+  if (G_IO_STATUS_NORMAL != g_io_channel_read_to_end(cn, &buf, &len, NULL))
+    buf = NULL;
+  g_io_channel_unref(cn);
+  if (file) close(fd);
+  return buf;
+}
+
 gboolean on_socket_msg(GThreadedSocketService *service,
                        GSocketConnection *conn,
-                       GSocketListener *listener, gpointer user_data) {
+                       GSocketListener *listener, Opt* opt) {
   GOutputStream *out = g_io_stream_get_output_stream(G_IO_STREAM(conn));
   GInputStream *in = g_io_stream_get_input_stream (G_IO_STREAM(conn));
   char buf[BUFSIZ];
@@ -26,6 +40,8 @@ gboolean on_socket_msg(GThreadedSocketService *service,
 
   char *hello = "Available commands: pause, load file.glsl, quit\n";
   g_output_stream_write_all(out, hello, strlen(hello), NULL, NULL, NULL);
+
+  GtkWindow *toplevel = GTK_WINDOW(gtk_widget_get_root(opt->shader));
 
   while (0 < (size = g_input_stream_read(in, buf, sizeof buf, NULL, NULL))) {
     char *res = "400 invalid command\n";
@@ -41,12 +57,22 @@ gboolean on_socket_msg(GThreadedSocketService *service,
         res = "500 pause\n";
         //shader_pause(opt->shader);
       }
-      if (0 == strcmp(req, "quit")) exit(0);
+      if (0 == strcmp(req, "quit")) gtk_window_close(toplevel);
     }
 
     if (2 == g_strv_length(cmd)) {
       if (0 == strcmp(cmd[0], "load")) {
-        res = "200 load\n";
+        char *src = input(cmd[1]);
+        if (src) {
+          res = "200 load\n";
+          char *title = g_path_get_basename(cmd[1]);
+          gtk_window_set_title(toplevel, title);
+          gtk_shadertoy_set_image_shader(GTK_SHADERTOY(opt->shader), src);
+          g_free(src);
+          g_free(title);
+        } else {
+          res = "400 load: reading failed\n";
+        }
       }
     }
 
@@ -117,19 +143,6 @@ gboolean on_close(GtkWidget *w, Opt *opt) {
   return opt->below;
 }
 
-gchar* input(char *file) {
-  int fd = file ? open(file, O_RDONLY) : fileno(stdin);
-  GIOChannel* cn = g_io_channel_unix_new(fd);
-  gchar* buf;
-  gsize len;
-
-  if (G_IO_STATUS_NORMAL != g_io_channel_read_to_end(cn, &buf, &len, NULL))
-    buf = NULL;
-  g_io_channel_unref(cn);
-  if (file) close(fd);
-  return buf;
-}
-
 void app_activate(GApplication *app, Opt *opt) {
   if (opt->port && !socket_listen(opt)) {
     // how do I provide status for g_application_quit()?
@@ -155,11 +168,11 @@ void app_activate(GApplication *app, Opt *opt) {
   gtk_widget_set_vexpand(aspect, TRUE);
   gtk_box_append(GTK_BOX(box), aspect);
 
-  GtkWidget *toy = new_shadertoy(opt->shader_src);
+  opt->shader = new_shadertoy(opt->shader_src);
 
   if (opt->fps) {
     GtkWidget *fps_overlay = gtk_overlay_new();
-    gtk_overlay_set_child(GTK_OVERLAY(fps_overlay), toy);
+    gtk_overlay_set_child(GTK_OVERLAY(fps_overlay), opt->shader);
 
     GtkWidget *fps_frame = gtk_frame_new(NULL);
     gtk_widget_set_halign(fps_frame, GTK_ALIGN_START);
@@ -173,9 +186,9 @@ void app_activate(GApplication *app, Opt *opt) {
 
     gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), fps_overlay);
 
-    gtk_widget_add_tick_callback(toy, on_toy_tick, fps_label, NULL);
+    gtk_widget_add_tick_callback(opt->shader, on_toy_tick, fps_label, NULL);
   } else {
-    gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), toy);
+    gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), opt->shader);
   }
 
   g_free(opt->shader_path);
@@ -186,7 +199,7 @@ void app_activate(GApplication *app, Opt *opt) {
   if (opt->fullscreen) gtk_window_fullscreen(GTK_WINDOW(win));
 
   if (opt->below) {
-    gtk_widget_set_can_target(toy, FALSE); // ignore mouse events
+    gtk_widget_set_can_target(opt->shader, FALSE); // ignore mouse events
     move_close_to_root(win);
   } else {
     GtkEventController *ctrl = gtk_event_controller_key_new();
