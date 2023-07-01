@@ -75,7 +75,7 @@ char** shellexpand(const char *s) {
   if (!s) return NULL;
   wordexp_t r;
   int status;
-  if (0 != (status = wordexp(s, &r, WRDE_SHOWERR))) {
+  if (0 != (status = wordexp(s, &r, WRDE_SHOWERR|WRDE_NOCMD))) {
     if (status == WRDE_NOSPACE) wordfree(&r);
     return NULL;
   }
@@ -97,20 +97,23 @@ gboolean on_socket_msg(GThreadedSocketService *service,
 
   while (0 < (size = g_input_stream_read(in, buf, sizeof buf, NULL, NULL))) {
     char *res = "400 invalid command\n";
+    static GMutex mutex;
     buf[size] = '\0';
     char *req = g_strstrip(buf);
 
+    g_mutex_lock(&mutex);
     char **cmd = shellexpand(req);
 
-    if (1 == g_strv_length(cmd)) {
+    if (!cmd) {
+      res = "400 syntax error\n";
+    } else if (1 == g_strv_length(cmd)) {
       if (0 == strcmp(req, "pause")) {
         res = "200 pause\n";
         shader_pause(opt);
       }
       if (0 == strcmp(req, "quit")) gtk_window_close(toplevel);
-    }
 
-    if (2 == g_strv_length(cmd)) {
+    } else if (2 == g_strv_length(cmd)) {
       if (0 == strcmp(cmd[0], "load")) {
         char *src = input(cmd[1]);
         if (src) {
@@ -128,6 +131,7 @@ gboolean on_socket_msg(GThreadedSocketService *service,
     }
 
     g_strfreev(cmd);
+    g_mutex_unlock(&mutex);
 
     g_output_stream_write(out, res, strlen(res), NULL, NULL);
   }
