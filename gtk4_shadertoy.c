@@ -90,10 +90,8 @@ gboolean on_socket_msg(GThreadedSocketService *service,
   char buf[BUFSIZ];
   gssize size;
 
-  char *hello = "Available commands: pause, load file.glsl, quit\n";
-  g_output_stream_write_all(out, hello, strlen(hello), NULL, NULL, NULL);
-
   GtkWindow *toplevel = GTK_WINDOW(gtk_widget_get_root(opt->shader));
+  gboolean quit = FALSE;
 
   while (0 < (size = g_input_stream_read(in, buf, sizeof buf, NULL, NULL))) {
     char *res = "400 invalid command\n";
@@ -106,12 +104,19 @@ gboolean on_socket_msg(GThreadedSocketService *service,
 
     if (!cmd) {
       res = "400 syntax error\n";
+
     } else if (1 == g_strv_length(cmd)) {
+      if (0 == strcmp(req, "help")) {
+        res = "Available commands: pause, load file.glsl, quit\n";
+      }
       if (0 == strcmp(req, "pause")) {
         res = "200 pause\n";
         shader_pause(opt);
       }
-      if (0 == strcmp(req, "quit")) gtk_window_close(toplevel);
+      if (0 == strcmp(req, "quit")) {
+        res = "200 quit\n";
+        quit = TRUE;
+      }
 
     } else if (2 == g_strv_length(cmd)) {
       if (0 == strcmp(cmd[0], "load")) {
@@ -134,8 +139,10 @@ gboolean on_socket_msg(GThreadedSocketService *service,
     g_mutex_unlock(&mutex);
 
     g_output_stream_write(out, res, strlen(res), NULL, NULL);
+    if (quit) break;
   }
 
+  if (quit) gtk_window_close(toplevel);
   return TRUE;
 }
 

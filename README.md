@@ -4,11 +4,12 @@ Run in a window:
 
     $ gtk4_shadertoy test/data/afl_ext/very-fast-procedural-ocean.glsl
 
-kbd          | desc
------------- | -------------
-<kbd>f</kbd> | fullscreen
-<kbd>r</kbd> | print the current framerate to stdout
-<kbd>q</kbd> | close window
+kbd              | desc
+---------------- | -------------
+<kbd>f</kbd>     | fullscreen
+<kbd>r</kbd>     | print the current framerate to stdout
+<kbd>q</kbd>     | close window
+<kbd>space</kbd> | pause
 
 Run fullscreen (-f) and show an FPS overlay (-r):
 
@@ -36,6 +37,7 @@ or, by just
 
 * a tiny gtk4 app;
 * no web browser dependency;
+* remote control via a socket;
 * X11 only, no wayland support yet;
 * renders only a subset of standalone shaders so far, i.e., if a
   shader depends on a texture specific to shadertoy.com it won't
@@ -49,6 +51,38 @@ $ make
 ~~~
 
 `_out/gtk4_shadertoy` should be the result.
+
+## Advanced control
+
+Run in a window, but also accept commands via a socket:
+
+~~~
+$ gtk4_shadertoy test/data/TAKUSAKU/fire-glass.glsl -p 2023
+** Message: 13:56:58.520: Listening on localhost:2023
+~~~
+
+Then,
+
+~~~
+$ telnet 127.0.0.1 2023
+help
+Available commands: pause, load file.glsl, quit
+pause
+200 pause
+pause
+200 pause
+load ~/lib/software/alex/gtk4_shadertoy/test/data/Kali/star-nest.glsl
+200 load
+quit
+Connection closed by foreign host.
+~~~
+
+Remote controlling using netcat:
+
+~~~
+$ echo load ~/some/file.glsl | nc 127.0.0.1 2023
+200 load
+~~~
 
 ## Fetching a shader without an API key
 
