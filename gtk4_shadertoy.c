@@ -164,7 +164,11 @@ gboolean on_keypress(GtkWidget *win, guint keyval, guint keycode,
                      GdkModifierType state, GtkEventControllerKey *evt_ctrl) {
   if (GDK_KEY_f == keyval) fullscreen_toggle(win);
   if (GDK_KEY_q == keyval) gtk_window_close(GTK_WINDOW(win));
-  if (GDK_KEY_r == keyval) printf("%f\n", fps(win));
+
+  Opt *opt = g_object_get_data(G_OBJECT(win), "opt");
+  if (GDK_KEY_r == keyval) printf("%f\n", fps(opt->shader));
+  if (GDK_KEY_space == keyval) shader_pause(opt);
+
   return TRUE;
 }
 
@@ -224,6 +228,7 @@ void app_activate(GApplication *app, Opt *opt) {
   g_free(opt->shader_path);
   g_free(opt->shader_src);
 
+  g_object_set_data(G_OBJECT(win), "opt", opt); // for on_keypress()
   gtk_window_present(GTK_WINDOW(win));
 
   if (opt->fullscreen) gtk_window_fullscreen(GTK_WINDOW(win));
@@ -235,7 +240,7 @@ void app_activate(GApplication *app, Opt *opt) {
     GtkEventController *ctrl = gtk_event_controller_key_new();
     g_signal_connect_object(ctrl, "key-pressed",
                             G_CALLBACK(on_keypress), win, G_CONNECT_SWAPPED);
-    gtk_widget_add_controller(GTK_WIDGET(win), ctrl);
+    gtk_widget_add_controller(win, ctrl);
   }
 }
 
