@@ -202,6 +202,16 @@ gtk_shadertoy_finalize (GObject *obj)
   G_OBJECT_CLASS (gtk_shadertoy_parent_class)->finalize (obj);
 }
 
+void gtk_shadertoy_pause(GtkWidget *toy) {
+  GtkShadertoyPrivate *priv = gtk_shadertoy_get_instance_private(GTK_SHADERTOY(toy));
+  gtk_widget_remove_tick_callback(toy, priv->tick);
+}
+
+void gtk_shadertoy_resume(GtkWidget *toy) {
+  GtkShadertoyPrivate *priv = gtk_shadertoy_get_instance_private(GTK_SHADERTOY(toy));
+  priv->tick = gtk_widget_add_tick_callback(toy, gtk_shadertoy_tick, toy, NULL);
+}
+
 static void
 gtk_shadertoy_class_init (GtkShadertoyClass *klass)
 {

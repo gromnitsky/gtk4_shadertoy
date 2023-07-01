@@ -28,7 +28,8 @@ GtkWidget  *gtk_shadertoy_new              (void);
 const char *gtk_shadertoy_get_image_shader (GtkShadertoy *shadertoy);
 void        gtk_shadertoy_set_image_shader (GtkShadertoy *shadertoy,
                                             const char   *shader);
-
+void gtk_shadertoy_pause(GtkWidget *toy);
+void gtk_shadertoy_resume(GtkWidget *toy);
 G_END_DECLS
 
 #endif /* __GTK_SHADERTOY_H__ */
