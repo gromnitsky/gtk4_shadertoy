@@ -86,7 +86,7 @@ gboolean on_socket_msg(GThreadedSocketService *service,
                        GSocketConnection *conn,
                        GSocketListener *listener, Opt* opt) {
   GOutputStream *out = g_io_stream_get_output_stream(G_IO_STREAM(conn));
-  GInputStream *in = g_io_stream_get_input_stream (G_IO_STREAM(conn));
+  GInputStream *in = g_io_stream_get_input_stream(G_IO_STREAM(conn));
   char buf[BUFSIZ];
   gssize size;
 
@@ -107,7 +107,7 @@ gboolean on_socket_msg(GThreadedSocketService *service,
 
     } else if (1 == g_strv_length(cmd)) {
       if (0 == strcmp(req, "help")) {
-        res = "Available commands: pause, load file.glsl, quit\n";
+        res = "200 help; available commands: pause, load file.glsl, quit\n";
       }
       if (0 == strcmp(req, "pause")) {
         res = "200 pause\n";

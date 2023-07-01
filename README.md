@@ -65,8 +65,11 @@ Then,
 
 ~~~
 $ telnet 127.0.0.1 2023
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
 help
-Available commands: pause, load file.glsl, quit
+200 help; available commands: pause, load file.glsl, quit
 pause
 200 pause
 pause
@@ -74,6 +77,7 @@ pause
 load ~/lib/software/alex/gtk4_shadertoy/test/data/Kali/star-nest.glsl
 200 load
 quit
+200 quit
 Connection closed by foreign host.
 ~~~
 
