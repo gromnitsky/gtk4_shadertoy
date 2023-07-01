@@ -20,11 +20,7 @@ user_agent='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Geck
 referer="https://www.shadertoy.com/view/$id"
 url='https://www.shadertoy.com/shadertoy'
 
-# return 1 on empty input
-validate() {
-    awk 'BEGIN { r=1 } { print $0; r=0 }
-         END { if (r) print "Invalid id?" | "cat 1>&2"; exit r }'
-}
+validate() { grep . || (echo "Invalid id?" 1>&2; exit 1); }
 
 curl -s -A "$user_agent" -e "$referer" -d 's={"shaders":["'"$id"'"]}' "$url" | \
     json -a 'renderpass["0"]["code"]' | validate
