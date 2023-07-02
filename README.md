@@ -4,6 +4,8 @@ Run in a window:
 
     $ gtk4_shadertoy test/data/afl_ext/very-fast-procedural-ocean.glsl
 
+Right click for menu or
+
 kbd               | desc
 ----------------- | -------------
 <kbd>f</kbd>      | fullscreen
