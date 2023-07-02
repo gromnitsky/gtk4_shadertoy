@@ -9,7 +9,6 @@
 #endif
 
 typedef struct {
-  gchar *shader_src;
   GtkWidget* shader;
   GtkWidget *fps_label;
   int shader_fps_tick;
@@ -35,12 +34,6 @@ gchar* input(char *file) {
   g_io_channel_unref(cn);
   if (file) close(fd);
   return buf;
-}
-
-GtkWidget* shader_new(gchar *shader_src) {
-  GtkWidget *toy = gtk_shadertoy_new();
-  gtk_shadertoy_set_image_shader(GTK_SHADERTOY(toy), shader_src);
-  return toy;
 }
 
 double fps(GtkWidget *w) {
@@ -87,7 +80,7 @@ gboolean shader_load(char *file, GtkWindow *toplevel, Opt *opt) {
   char *src = input(file);
   if (!src) return FALSE;
 
-  char *title = g_path_get_basename(file);
+  char *title = file ? g_path_get_basename(file) : g_strdup("[stdin]");
   gtk_window_set_title(toplevel, title);
   gtk_shadertoy_set_image_shader(GTK_SHADERTOY(opt->shader), src);
   if (!opt->shader_playing) shader_pause(opt);
@@ -272,14 +265,11 @@ void app_activate(GApplication *app, Opt *opt) {
     exit(1);
   }
 
-  if (!opt->shader_src) opt->shader_src = input(NULL); // try to read stdin
   if (opt->below) g_set_prgname("gtk4_shadertoy_below");
 
   GtkWidget *win = gtk_window_new();
   gtk_window_set_application(GTK_WINDOW(win), GTK_APPLICATION(app));
   gtk_window_set_default_size(GTK_WINDOW(win), 854, 480); // 480p, 16:9
-  gtk_window_set_title(GTK_WINDOW(win),
-                       opt->shader_path ? opt->shader_path : "[stdin]");
 
   g_signal_connect(win, "close-request", G_CALLBACK(on_close), opt);
 
@@ -291,7 +281,9 @@ void app_activate(GApplication *app, Opt *opt) {
   gtk_widget_set_vexpand(aspect, TRUE);
   gtk_box_append(GTK_BOX(box), aspect);
 
-  opt->shader = shader_new(opt->shader_src);
+  opt->shader = gtk_shadertoy_new();
+  shader_load(opt->shader_path, GTK_WINDOW(win), opt);
+  g_free(opt->shader_path);
 
   if (opt->fps) {
     GtkWidget *fps_overlay = gtk_overlay_new();
@@ -313,9 +305,6 @@ void app_activate(GApplication *app, Opt *opt) {
   } else {
     gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), opt->shader);
   }
-
-  g_free(opt->shader_path);
-  g_free(opt->shader_src);
 
   g_object_set_data(G_OBJECT(win), "opt", opt); // for on_keypress()
   gtk_window_present(GTK_WINDOW(win));
@@ -344,10 +333,7 @@ void app_activate(GApplication *app, Opt *opt) {
 
 void app_open(GApplication *app, GFile **files, gint n_files,
               gchar* hint, Opt *opt) {
-  char *path = g_file_get_path(files[0]);
-  opt->shader_src = input(path);
-  if (opt->shader_src) opt->shader_path = g_file_get_basename(files[0]);
-  g_free(path);
+  opt->shader_path = g_file_get_path(files[0]);
   g_application_activate(app);
 }
 
