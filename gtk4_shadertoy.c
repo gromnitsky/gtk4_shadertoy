@@ -189,6 +189,7 @@ gboolean on_keypress(GtkWidget *win, guint keyval, guint keycode,
 }
 
 gboolean on_close(GtkWidget *w, Opt *opt) {
+  gtk_widget_unparent(opt->menu);
   if (opt->below) gdk_display_beep(gtk_widget_get_display(w));
   return opt->below;
 }
@@ -202,8 +203,24 @@ void menu_fullscreen(GtkWidget *win, const char *_, GVariant *__) {
   fullscreen_toggle(win);
 }
 
-void menu_shader_load(GtkWidget *win, const char *_, GVariant *__) {
+void menu_shader_load_done(GObject *source, GAsyncResult *result,
+                           gpointer data) {
+  GtkFileDialog *dialog = GTK_FILE_DIALOG(source);
+  GFile *file = gtk_file_dialog_open_finish(dialog, result, NULL);
+  if (!file) return;
 
+  Opt *opt = data;
+  GtkWindow *toplevel = GTK_WINDOW(gtk_widget_get_root(opt->shader));
+  shader_load((char*)g_file_peek_path(file), toplevel, opt);
+  g_object_unref(file);
+}
+
+void menu_shader_load(GtkWidget *win, const char *_, GVariant *__) {
+  GtkFileDialog *dialog = gtk_file_dialog_new();
+  gtk_file_dialog_set_modal(dialog, TRUE);
+  Opt *opt = g_object_get_data(G_OBJECT(win), "opt");
+  gtk_file_dialog_open(dialog, GTK_WINDOW(win), NULL, menu_shader_load_done, opt);
+  g_object_unref(dialog);
 }
 
 GtkWidget* mk_menu(GtkWidget *parent, Opt *opt) {
