@@ -4,12 +4,13 @@ Run in a window:
 
     $ gtk4_shadertoy test/data/afl_ext/very-fast-procedural-ocean.glsl
 
-kbd              | desc
----------------- | -------------
-<kbd>f</kbd>     | fullscreen
-<kbd>r</kbd>     | print the current framerate to stdout
-<kbd>q</kbd>     | close window
-<kbd>space</kbd> | pause
+kbd               | desc
+----------------- | -------------
+<kbd>f</kbd>      | fullscreen
+<kbd>r</kbd>      | print the current framerate to stdout
+<kbd>esc</kbd>    | close window
+<kbd>space</kbd>  | pause
+<kbd>ctrl-o</kbd> | open another shader
 
 Run fullscreen (-f) and show an FPS overlay (-r):
 

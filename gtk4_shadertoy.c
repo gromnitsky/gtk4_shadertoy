@@ -176,10 +176,42 @@ void fullscreen_toggle(GtkWidget *win) {
   fn(GTK_WINDOW(win));
 }
 
+void on_right_click(GtkGestureClick *gesture, guint n_press, double x, double y,
+                    GtkWidget *win) {
+  //g_message("%f, %f", x, y);
+  Opt *opt = g_object_get_data(G_OBJECT(win), "opt");
+  GdkRectangle rect = { x, y, -1, -1 };
+  gtk_popover_set_pointing_to(GTK_POPOVER(opt->menu), &rect);
+  gtk_popover_popup(GTK_POPOVER(opt->menu));
+}
+
+void menu_shader_load_done(GObject *source, GAsyncResult *result,
+                           gpointer data) {
+  GtkFileDialog *dialog = GTK_FILE_DIALOG(source);
+  GFile *file = gtk_file_dialog_open_finish(dialog, result, NULL);
+  if (!file) return;
+
+  Opt *opt = data;
+  GtkWindow *toplevel = GTK_WINDOW(gtk_widget_get_root(opt->shader));
+  shader_load((char*)g_file_peek_path(file), toplevel, opt);
+  g_object_unref(file);
+}
+
+void menu_shader_load(GtkWidget *win, const char *_, GVariant *__) {
+  GtkFileDialog *dialog = gtk_file_dialog_new();
+  gtk_file_dialog_set_modal(dialog, TRUE);
+  Opt *opt = g_object_get_data(G_OBJECT(win), "opt");
+  gtk_file_dialog_open(dialog, GTK_WINDOW(win), NULL, menu_shader_load_done, opt);
+  g_object_unref(dialog);
+}
+
 gboolean on_keypress(GtkWidget *win, guint keyval, guint keycode,
                      GdkModifierType state, GtkEventControllerKey *evt_ctrl) {
   if (GDK_KEY_f == keyval) fullscreen_toggle(win);
-  if (GDK_KEY_q == keyval) gtk_window_close(GTK_WINDOW(win));
+  if (GDK_KEY_Escape == keyval) gtk_window_close(GTK_WINDOW(win));
+  if (GDK_KEY_Menu == keyval) on_right_click(NULL, -1, 0, 0, win);
+  if (state == GDK_CONTROL_MASK && GDK_KEY_o == keyval)
+    menu_shader_load(win, NULL, NULL);
 
   Opt *opt = g_object_get_data(G_OBJECT(win), "opt");
   if (GDK_KEY_r == keyval) printf("%f\n", fps(opt->shader));
@@ -203,37 +235,17 @@ void menu_fullscreen(GtkWidget *win, const char *_, GVariant *__) {
   fullscreen_toggle(win);
 }
 
-void menu_shader_load_done(GObject *source, GAsyncResult *result,
-                           gpointer data) {
-  GtkFileDialog *dialog = GTK_FILE_DIALOG(source);
-  GFile *file = gtk_file_dialog_open_finish(dialog, result, NULL);
-  if (!file) return;
-
-  Opt *opt = data;
-  GtkWindow *toplevel = GTK_WINDOW(gtk_widget_get_root(opt->shader));
-  shader_load((char*)g_file_peek_path(file), toplevel, opt);
-  g_object_unref(file);
-}
-
-void menu_shader_load(GtkWidget *win, const char *_, GVariant *__) {
-  GtkFileDialog *dialog = gtk_file_dialog_new();
-  gtk_file_dialog_set_modal(dialog, TRUE);
-  Opt *opt = g_object_get_data(G_OBJECT(win), "opt");
-  gtk_file_dialog_open(dialog, GTK_WINDOW(win), NULL, menu_shader_load_done, opt);
-  g_object_unref(dialog);
-}
-
 GtkWidget* mk_menu(GtkWidget *parent, Opt *opt) {
   GMenuItem *i;
   GMenu *m = g_menu_new();
 
-  i = g_menu_item_new("Fullscreen", "menu.fullscreen");
+  i = g_menu_item_new("_Fullscreen", "menu.fullscreen");
   gtk_widget_class_install_action(GTK_WIDGET_GET_CLASS(parent),
                                   "menu.fullscreen", NULL, menu_fullscreen);
   g_menu_append_item(m, i);
   g_object_unref(i);
 
-  i = g_menu_item_new("Open shader", "menu.shader_load");
+  i = g_menu_item_new("_Open shader", "menu.shader_load");
   gtk_widget_class_install_action(GTK_WIDGET_GET_CLASS(parent),
                                   "menu.shader_load", NULL, menu_shader_load);
   g_menu_append_item(m, i);
@@ -252,15 +264,6 @@ GtkWidget* mk_menu(GtkWidget *parent, Opt *opt) {
   g_object_unref(m);
 
   return popover;
-}
-
-void on_click(GtkGestureClick *gesture, guint n_press, double x, double y,
-              GtkWidget *win) {
-  //g_message("%f, %f", x, y);
-  Opt *opt = g_object_get_data(G_OBJECT(win), "opt");
-  GdkRectangle rect = { x, y, -1, -1 };
-  gtk_popover_set_pointing_to(GTK_POPOVER(opt->menu), &rect);
-  gtk_popover_popup(GTK_POPOVER(opt->menu));
 }
 
 void app_activate(GApplication *app, Opt *opt) {
@@ -332,7 +335,7 @@ void app_activate(GApplication *app, Opt *opt) {
     // mouse
     GtkGesture *gesture = gtk_gesture_click_new();
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(gesture), 3);
-    g_signal_connect(gesture, "pressed", G_CALLBACK(on_click), win);
+    g_signal_connect(gesture, "pressed", G_CALLBACK(on_right_click), win);
     gtk_widget_add_controller(win, GTK_EVENT_CONTROLLER(gesture));
 
     opt->menu = mk_menu(win, opt);
