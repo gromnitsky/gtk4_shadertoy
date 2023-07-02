@@ -91,6 +91,17 @@ $ echo load ~/some/file.glsl | nc 127.0.0.1 2023
 200 load
 ~~~
 
+A madness tour:
+
+~~~
+$ while :; do
+  echo load `find test/data -type f | shuf | head -1` | nc 127.0.0.1 2023
+  sleep 4
+done
+~~~
+
+You can add the `echo load ...` line to a crontab.
+
 ## Fetching a shader without an API key
 
 ~~~
