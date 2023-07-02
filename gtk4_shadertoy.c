@@ -140,7 +140,7 @@ gboolean on_socket_msg(GThreadedSocketService *service,
     if (quit) break;
   }
 
-  if (quit) gtk_window_close(toplevel);
+  if (quit) exit(0);
   return TRUE;
 }
 
@@ -214,7 +214,7 @@ gboolean on_keypress(GtkWidget *win, guint keyval, guint keycode,
 }
 
 gboolean on_close(GtkWidget *w, Opt *opt) {
-  gtk_widget_unparent(opt->menu);
+  if (opt->menu) gtk_widget_unparent(opt->menu);
   if (opt->below) gdk_display_beep(gtk_widget_get_display(w));
   return opt->below;
 }
