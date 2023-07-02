@@ -14,6 +14,7 @@ typedef struct {
   GtkWidget *fps_label;
   int shader_fps_tick;
   gboolean shader_playing;
+  GtkWidget *menu;
 
   /* command line */
   gchar *shader_path;
@@ -82,6 +83,20 @@ char** shellexpand(const char *s) {
   return r.we_wordv;
 }
 
+gboolean shader_load(char *file, GtkWindow *toplevel, Opt *opt) {
+  char *src = input(file);
+  if (!src) return FALSE;
+
+  char *title = g_path_get_basename(file);
+  gtk_window_set_title(toplevel, title);
+  gtk_shadertoy_set_image_shader(GTK_SHADERTOY(opt->shader), src);
+  if (!opt->shader_playing) shader_pause(opt);
+  g_free(src);
+  g_free(title);
+
+  return TRUE;
+}
+
 gboolean on_socket_msg(GThreadedSocketService *service,
                        GSocketConnection *conn,
                        GSocketListener *listener, Opt* opt) {
@@ -120,18 +135,8 @@ gboolean on_socket_msg(GThreadedSocketService *service,
 
     } else if (2 == g_strv_length(cmd)) {
       if (0 == strcmp(cmd[0], "load")) {
-        char *src = input(cmd[1]);
-        if (src) {
-          res = "200 load\n";
-          char *title = g_path_get_basename(cmd[1]);
-          gtk_window_set_title(toplevel, title);
-          gtk_shadertoy_set_image_shader(GTK_SHADERTOY(opt->shader), src);
-          if (!opt->shader_playing) shader_pause(opt);
-          g_free(src);
-          g_free(title);
-        } else {
-          res = "400 load: reading failed\n";
-        }
+        res = "400 load: reading failed\n";
+        if (shader_load(cmd[1], toplevel, opt)) res = "200 load\n";
       }
     }
 
@@ -186,6 +191,59 @@ gboolean on_keypress(GtkWidget *win, guint keyval, guint keycode,
 gboolean on_close(GtkWidget *w, Opt *opt) {
   if (opt->below) gdk_display_beep(gtk_widget_get_display(w));
   return opt->below;
+}
+
+void menu_pause(GtkWidget *win, const char *_, GVariant *__) {
+  Opt *opt = g_object_get_data(G_OBJECT(win), "opt");
+  shader_pause(opt);
+}
+
+void menu_fullscreen(GtkWidget *win, const char *_, GVariant *__) {
+  fullscreen_toggle(win);
+}
+
+void menu_shader_load(GtkWidget *win, const char *_, GVariant *__) {
+
+}
+
+GtkWidget* mk_menu(GtkWidget *parent, Opt *opt) {
+  GMenuItem *i;
+  GMenu *m = g_menu_new();
+
+  i = g_menu_item_new("Fullscreen", "menu.fullscreen");
+  gtk_widget_class_install_action(GTK_WIDGET_GET_CLASS(parent),
+                                  "menu.fullscreen", NULL, menu_fullscreen);
+  g_menu_append_item(m, i);
+  g_object_unref(i);
+
+  i = g_menu_item_new("Open shader", "menu.shader_load");
+  gtk_widget_class_install_action(GTK_WIDGET_GET_CLASS(parent),
+                                  "menu.shader_load", NULL, menu_shader_load);
+  g_menu_append_item(m, i);
+  g_object_unref(i);
+
+  i = g_menu_item_new("_Pause", "menu.pause");
+  gtk_widget_class_install_action(GTK_WIDGET_GET_CLASS(parent),
+                                  "menu.pause", NULL, menu_pause);
+  g_menu_append_item(m, i);
+  g_object_unref(i);
+
+  GtkWidget *popover = gtk_popover_menu_new_from_model(G_MENU_MODEL(m));
+  gtk_popover_set_has_arrow(GTK_POPOVER(popover), FALSE);
+  gtk_widget_set_parent(popover, parent);
+
+  g_object_unref(m);
+
+  return popover;
+}
+
+void on_click(GtkGestureClick *gesture, guint n_press, double x, double y,
+              GtkWidget *win) {
+  //g_message("%f, %f", x, y);
+  Opt *opt = g_object_get_data(G_OBJECT(win), "opt");
+  GdkRectangle rect = { x, y, -1, -1 };
+  gtk_popover_set_pointing_to(GTK_POPOVER(opt->menu), &rect);
+  gtk_popover_popup(GTK_POPOVER(opt->menu));
 }
 
 void app_activate(GApplication *app, Opt *opt) {
@@ -248,10 +306,19 @@ void app_activate(GApplication *app, Opt *opt) {
     gtk_widget_set_can_target(opt->shader, FALSE); // ignore mouse events
     move_close_to_root(win);
   } else {
+    // keyboard
     GtkEventController *ctrl = gtk_event_controller_key_new();
     g_signal_connect_object(ctrl, "key-pressed",
                             G_CALLBACK(on_keypress), win, G_CONNECT_SWAPPED);
     gtk_widget_add_controller(win, ctrl);
+
+    // mouse
+    GtkGesture *gesture = gtk_gesture_click_new();
+    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(gesture), 3);
+    g_signal_connect(gesture, "pressed", G_CALLBACK(on_click), win);
+    gtk_widget_add_controller(win, GTK_EVENT_CONTROLLER(gesture));
+
+    opt->menu = mk_menu(win, opt);
   }
 }
 
