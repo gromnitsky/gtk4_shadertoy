@@ -11,6 +11,7 @@
 typedef struct {
   GtkWidget* shader;
   GtkWidget *fps_label;
+  GtkWidget *fps_frame;
   int shader_fps_tick;
   gboolean shader_playing;
   GtkWidget *menu;
@@ -50,16 +51,28 @@ gboolean on_toy_tick(GtkWidget* toy, GdkFrameClock* frame_clock,
   return TRUE;
 }
 
+void fps_hide(Opt *opt) {
+  gtk_widget_set_visible(opt->fps_frame, FALSE);
+  gtk_widget_remove_tick_callback(opt->shader, opt->shader_fps_tick);
+}
+
+void fps_show(Opt *opt) {
+  gtk_widget_set_visible(opt->fps_frame, TRUE);
+  opt->shader_fps_tick = gtk_widget_add_tick_callback(opt->shader, on_toy_tick, opt->fps_label, NULL);
+}
+
+void fps_toggle(Opt *opt) {
+  gtk_widget_get_visible(opt->fps_frame) ? fps_hide(opt) : fps_show(opt);
+  opt->fps = !opt->fps;
+}
+
 void shader_pause(Opt *opt) {
   if (opt->shader_playing) {
     gtk_shadertoy_pause(opt->shader);
-    if (opt->fps)
-      gtk_widget_remove_tick_callback(opt->shader, opt->shader_fps_tick);
-
+    if (opt->fps) fps_hide(opt);
   } else {
     gtk_shadertoy_resume(opt->shader);
-    if (opt->fps)
-      opt->shader_fps_tick = gtk_widget_add_tick_callback(opt->shader, on_toy_tick, opt->fps_label, NULL);
+    if (opt->fps) fps_show(opt);
   }
 
   opt->shader_playing = !opt->shader_playing;
@@ -207,7 +220,7 @@ gboolean on_keypress(GtkWidget *win, guint keyval, guint keycode,
     menu_shader_load(win, NULL, NULL);
 
   Opt *opt = g_object_get_data(G_OBJECT(win), "opt");
-  if (GDK_KEY_r == keyval) printf("%f\n", fps(opt->shader));
+  if (GDK_KEY_r == keyval) fps_toggle(opt);
   if (GDK_KEY_space == keyval) shader_pause(opt);
 
   return TRUE;
@@ -217,6 +230,11 @@ gboolean on_close(GtkWidget *w, Opt *opt) {
   if (opt->menu) gtk_widget_unparent(opt->menu);
   if (opt->below) gdk_display_beep(gtk_widget_get_display(w));
   return opt->below;
+}
+
+void menu_fps(GtkWidget *win, const char *_, GVariant *__) {
+  Opt *opt = g_object_get_data(G_OBJECT(win), "opt");
+  fps_toggle(opt);
 }
 
 void menu_pause(GtkWidget *win, const char *_, GVariant *__) {
@@ -241,6 +259,12 @@ GtkWidget* mk_menu(GtkWidget *parent, Opt *opt) {
   i = g_menu_item_new("_Open shader", "menu.shader_load");
   gtk_widget_class_install_action(GTK_WIDGET_GET_CLASS(parent),
                                   "menu.shader_load", NULL, menu_shader_load);
+  g_menu_append_item(m, i);
+  g_object_unref(i);
+
+  i = g_menu_item_new("F_ramerate", "menu.fps");
+  gtk_widget_class_install_action(GTK_WIDGET_GET_CLASS(parent),
+                                  "menu.fps", NULL, menu_fps);
   g_menu_append_item(m, i);
   g_object_unref(i);
 
@@ -285,26 +309,21 @@ void app_activate(GApplication *app, Opt *opt) {
   shader_load(opt->shader_path, GTK_WINDOW(win), opt);
   g_free(opt->shader_path);
 
-  if (opt->fps) {
-    GtkWidget *fps_overlay = gtk_overlay_new();
-    gtk_overlay_set_child(GTK_OVERLAY(fps_overlay), opt->shader);
+  GtkWidget *fps_overlay = gtk_overlay_new();
+  gtk_overlay_set_child(GTK_OVERLAY(fps_overlay), opt->shader);
 
-    GtkWidget *fps_frame = gtk_frame_new(NULL);
-    gtk_widget_set_halign(fps_frame, GTK_ALIGN_START);
-    gtk_widget_set_valign(fps_frame, GTK_ALIGN_START);
-    gtk_widget_add_css_class(fps_frame, "app-notification");
+  opt->fps_frame = gtk_frame_new(NULL);
+  gtk_widget_set_halign(opt->fps_frame, GTK_ALIGN_START);
+  gtk_widget_set_valign(opt->fps_frame, GTK_ALIGN_START);
+  gtk_widget_add_css_class(opt->fps_frame, "app-notification");
 
-    opt->fps_label = gtk_label_new("-1");
-    gtk_widget_set_halign(opt->fps_label, GTK_ALIGN_START);
-    gtk_frame_set_child(GTK_FRAME(fps_frame), opt->fps_label);
-    gtk_overlay_add_overlay(GTK_OVERLAY(fps_overlay), fps_frame);
+  opt->fps_label = gtk_label_new("-1");
+  gtk_widget_set_halign(opt->fps_label, GTK_ALIGN_START);
+  gtk_frame_set_child(GTK_FRAME(opt->fps_frame), opt->fps_label);
+  gtk_overlay_add_overlay(GTK_OVERLAY(fps_overlay), opt->fps_frame);
 
-    gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), fps_overlay);
-
-    opt->shader_fps_tick = gtk_widget_add_tick_callback(opt->shader, on_toy_tick, opt->fps_label, NULL);
-  } else {
-    gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), opt->shader);
-  }
+  gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(aspect), fps_overlay);
+  opt->fps ? fps_show(opt) : gtk_widget_set_visible(opt->fps_frame, FALSE);
 
   g_object_set_data(G_OBJECT(win), "opt", opt); // for on_keypress()
   gtk_window_present(GTK_WINDOW(win));

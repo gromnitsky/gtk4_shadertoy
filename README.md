@@ -9,12 +9,12 @@ Right click for menu or
 kbd               | desc
 ----------------- | -------------
 <kbd>f</kbd>      | fullscreen
-<kbd>r</kbd>      | print the current framerate to stdout
+<kbd>r</kbd>      | toggle an FPS overlay
 <kbd>esc</kbd>    | close window
 <kbd>space</kbd>  | pause
 <kbd>ctrl-o</kbd> | open another shader
 
-Run fullscreen (-f) and show an FPS overlay (-r):
+Run fullscreen (-f) and show the FPS overlay (-r):
 
     $ gtk4_shadertoy -fr < file.glsl
 
