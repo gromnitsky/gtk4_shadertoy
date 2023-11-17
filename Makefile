@@ -7,7 +7,7 @@ LDFLAGS := $(shell pkg-config $(libs) --libs)
 deps := $(patsubst %.c, $(out)/%.o, $(wildcard *.c))
 
 $(out)/gtk4_shadertoy: $(deps)
-	$(LINK.c) $^ -o $@
+	$(CC) $^ $(LDFLAGS) -o $@
 
 $(out)/%.o: %.c
 	@mkdir -p $(dir $@)
