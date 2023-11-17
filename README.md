@@ -18,7 +18,7 @@ Run fullscreen (-f) and show the FPS overlay (-r):
 
     $ gtk4_shadertoy -fr < file.glsl
 
-Put the app on the lowest window layer, ignore kbd/mouse input:
+Put the app on the lowest window layer (X11 only), ignore kbd/mouse input:
 
     $ gtk4_shadertoy -fr -b file.glsl
 
@@ -41,15 +41,24 @@ or, by just
 * a tiny gtk4 app;
 * no web browser dependency;
 * remote control via a socket;
-* X11 only, no wayland support yet;
+* `-b` option crashes the app in Wayland;
 * renders only a subset of standalone shaders so far, i.e., if a
   shader depends on a texture specific to shadertoy.com it won't
   work.
 
 ## Compilation
 
+* Fedora:
+
+        $ sudo dnf install gtk4-devel
+
+* Ubuntu:
+
+        $ sudo apt-get install libgtk-4-dev
+
+then
+
 ~~~
-$ sudo dnf install gtk4-devel
 $ make
 ~~~
 
